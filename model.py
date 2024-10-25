@@ -55,4 +55,27 @@ class Model(object):
                 return data
     def Render(self):
         self.buffer.Render()
+
+    def AddTexture(self, textureFilename):
+        self.textureSurface = image.load(textureFilename)
+        self.textureData = image.tostring(self.textureSurface, "RGB", True)
+        self.texture = glGenTextures(1)
+
+    def Render(self):
+        # Dar la textura
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, self.texture)
+
+        glTexImage2D(GL_TEXTURE_2D,
+                    0,              # Positions
+                    GL_RGB,         # Format
+                    0,              # Width
+                    0,              # Height
+                    0,              # Border
+                    0,              # Format
+                    0,              # Type
+                    0)              # Data
+
+        self.buffer.Render()
+
                     
