@@ -31,9 +31,27 @@ class Buffer(object):
 							GL_FLOAT,           # Data type
 							GL_FALSE,           # Normalized or not
 							4*6,                  # Stride
+							ctypes.c_void_p(0))
+                             						# Offset
+		glEnableVertexAttribArray(0)   
+        #textura
+		glVertexAttribPointer(0,                  # Attribute number
+							3,                  # Number of components per vertex
+							GL_FLOAT,           # Data type
+							GL_FALSE,           # Normalized or not
+							4*6,                  # Stride
 							ctypes.c_void_p(4*3))
                              						# Offset
-		glEnableVertexAttribArray(0)              # Enable attribute array
+		glEnableVertexAttribArray(1)             # Enable attribute array
+              
+		glVertexAttribPointer(0,                  # Attribute number
+							3,                  # Number of components per vertex
+							GL_FLOAT,           # Data type
+							GL_FALSE,           # Normalized or not
+							4*6,                  # Stride
+							ctypes.c_void_p(4*5))
+                             						# Offset
+		glEnableVertexAttribArray(2)    
 	
-		glDrawArrays( GL_TRIANGLES, 0, int(len(self.vertBuffer)/6) )
+		glDrawArrays( GL_TRIANGLES, 0, int(len(self.vertBuffer)/8) )
 
