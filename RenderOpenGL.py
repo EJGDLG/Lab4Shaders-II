@@ -25,6 +25,7 @@ rend = Renderer(screen)
 #rend.scene.append(Buffer(triangle))
 
 faceModel  = Model("Gun.obj")
+faceModel.AddTexture("Gun.bmp")
 rend.scene.append(faceModel)
 
 isRunning = True
