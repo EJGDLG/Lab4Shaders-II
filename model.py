@@ -1,4 +1,6 @@
 from obj import Obj
+from buffer import Buffer
+from  pygame import image
 
 class Model(object):
     def __init__(self, filename):
@@ -8,7 +10,7 @@ class Model(object):
         self.texCoords = objFile.texcoords
         self.normals = objFile.normals
         self.faces = objFile.faces
-
+        self.texture = None
         self.buffer = Buffer(self.BuildBuffer())
 
     def BuildBuffer(self):
@@ -53,8 +55,7 @@ class Model(object):
                         data.append(value)
 
                 return data
-    def Render(self):
-        self.buffer.Render()
+
 
     def AddTexture(self, textureFilename):
         self.textureSurface = image.load(textureFilename)
@@ -76,6 +77,5 @@ class Model(object):
                     0,              # Type
                     0)              # Data
 
-        self.buffer.Render()
-
-                    
+      
+        self.buffer.Render()          
