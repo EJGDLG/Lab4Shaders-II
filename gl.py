@@ -1,262 +1,154 @@
-import struct
-from camera import Camera
-from math import tan, pi
-from MathLib import barycentricCoords, matrix_mult, TranslationMatrix, ScaleMatrix, RotationMatrix
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+import numpy as np
 
-def char(c):
-    return struct.pack("=c", c.encode("ascii"))
+# Vertex Shader
+vertex_shader_code = """
+#version 330 core
+layout(location = 0) in vec3 position;
 
-def word(w):
-    return struct.pack("=h", w)
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
 
-def dword(d):
-    return struct.pack("=l", d)
+void main() {
+    gl_Position = projection * view * model * vec4(position, 1.0);
+}
+"""
 
-POINTS = 0
-LINES = 1
-TRIANGLES = 2
+# Fragment Shader
+fragment_shader_code = """
+#version 330 core
+out vec4 fragColor;
 
-class Renderer(object):
-    def __init__(self, screen):
-        self.screen = screen
-        _, _, self.width, self.height = screen.get_rect()
+void main() {
+    fragColor = vec4(1.0, 1.0, 1.0, 1.0);  # Color blanco
+}
+"""
 
-        self.camera = Camera()
-        self.glViewport(0, 0, self.width, self.height)
-        self.glProjection()
+class Renderer:
+    def __init__(self):
+        # Shader program
+        self.shaderProgram = None
 
-        self.glColor(1, 1, 1)
-        self.glClearColor(0, 0, 0)
-        self.glClear()
+        # Vertex Array Object (VAO)
+        self.VAO = None
 
-        self.vertexShader = None
-        self.fragmentShader = None
+        # Matrices de transformación
+        self.modelMatrix = np.identity(4, dtype=np.float32)
+        self.viewMatrix = np.identity(4, dtype=np.float32)
+        self.projectionMatrix = np.identity(4, dtype=np.float32)
 
-        self.activeTexture = None
-        self.primitiveType = TRIANGLES
-        self.models = []
+        self.vertices = np.array([
+            [-0.5, -0.5, 0.0],
+            [0.5, -0.5, 0.0],
+            [0.0,  0.5, 0.0]
+        ], dtype=np.float32)
 
-    def glViewport(self, x, y, width, height):
-        self.vpX = int(x)
-        self.vpY = int(y)
-        self.vpWidth = width
-        self.vpHeight = height
+    def compile_shader(self, source, shader_type):
+        shader = glCreateShader(shader_type)
+        glShaderSource(shader, source)
+        glCompileShader(shader)
 
-        self.viewportMatrix = [
-            [width / 2, 0, 0, x + width / 2],
-            [0, height / 2, 0, y + height / 2],
-            [0, 0, 0.5, 0.5],
-            [0, 0, 0, 1]
-        ]
+        if not glGetShaderiv(shader, GL_COMPILE_STATUS):
+            raise RuntimeError(glGetShaderInfoLog(shader))
+        return shader
 
-    def glProjection(self, n=0.1, f=1000, fov=60):
-        aspectRatio = self.vpWidth / self.vpHeight
-        fov *= pi / 180
-        t = tan(fov / 2) * n
-        r = t * aspectRatio
+    def create_shader_program(self, vertex_source, fragment_source):
+        vertex_shader = self.compile_shader(vertex_source, GL_VERTEX_SHADER)
+        fragment_shader = self.compile_shader(fragment_source, GL_FRAGMENT_SHADER)
 
-        self.projectionMatrix = [
-            [n / r, 0, 0, 0],
-            [0, n / t, 0, 0],
-            [0, 0, -(f + n) / (f - n), -(2 * f * n) / (f - n)],
-            [0, 0, -1, 0]
-        ]
+        program = glCreateProgram()
+        glAttachShader(program, vertex_shader)
+        glAttachShader(program, fragment_shader)
+        glLinkProgram(program)
 
-    def glColor(self, r, g, b):
-        self.currColor = [min(1, max(0, r)), min(1, max(0, g)), min(1, max(0, b))]
+        if not glGetProgramiv(program, GL_LINK_STATUS):
+            raise RuntimeError(glGetProgramInfoLog(program))
+        return program
 
-    def glClearColor(self, r, g, b):
-        self.clearColor = [min(1, max(0, r)), min(1, max(0, g)), min(1, max(0, b))]
+    def createBuffer(self):
+        # Crear Vertex Array Object (VAO)
+        self.VAO = glGenVertexArrays(1)
+        glBindVertexArray(self.VAO)
 
-    def glClear(self):
-        color = [int(i * 255) for i in self.clearColor]
-        self.screen.fill(color)
-        self.frameBuffer = [[self.clearColor for _ in range(self.height)] for _ in range(self.width)]
-        self.zbuffer = [[float('inf') for _ in range(self.height)] for _ in range(self.width)]
+        # Crear Vertex Buffer Object (VBO)
+        VBO = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, VBO)
+        glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STATIC_DRAW)
 
-    def glPoint(self, x, y, color=None):
-        x = round(x)
-        y = round(y)
-        if 0 <= x < self.width and 0 <= y < self.height:
-            color = [int(i * 255) for i in (color or self.currColor)]
-            self.screen.set_at((x, self.height - 1 - y), color)
-            self.frameBuffer[x][y] = color
+        # Especificar el formato de los vértices
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * 4, None)
+        glEnableVertexAttribArray(0)
 
-    def glLine(self, v0, v1, color=None):
-        x0, y0 = v0
-        x1, y1 = v1
-        if x0 == x1 and y0 == y1:
-            self.glPoint(x0, y0, color)
-            return
+    def set_matrices(self):
+        # Obtener ubicaciones uniformes para las matrices
+        modelLoc = glGetUniformLocation(self.shaderProgram, "model")
+        viewLoc = glGetUniformLocation(self.shaderProgram, "view")
+        projLoc = glGetUniformLocation(self.shaderProgram, "projection")
 
-        dy, dx = abs(y1 - y0), abs(x1 - x0)
-        steep = dy > dx
-        if steep:
-            x0, y0, x1, y1 = y0, x0, y1, x1
-        if x0 > x1:
-            x0, x1, y0, y1 = x1, x0, y1, y0
+        # Cargar las matrices a los shaders
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, self.modelMatrix)
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, self.viewMatrix)
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, self.projectionMatrix)
 
-        dy, dx = abs(y1 - y0), abs(x1 - x0)
-        offset, limit = 0, 0.75
-        m, y = dy / dx, y0
+    def render(self):
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        for x in range(round(x0), round(x1) + 1):
-            if steep:
-                self.glPoint(y, x, color)
-            else:
-                self.glPoint(x, y, color)
+        # Usa el programa de shaders
+        glUseProgram(self.shaderProgram)
 
-            offset += m
-            if offset >= limit:
-                y += 1 if y0 < y1 else -1
-                limit += 1
+        # Cargar matrices de transformación
+        self.set_matrices()
 
-    def glGenerateFrameBuffer(self, filename):
-        with open(filename, "wb") as file:
-            file.write(char("B"))
-            file.write(char("M"))
-            file.write(dword(14 + 40 + (self.width * self.height * 3)))
-            file.write(dword(0))
-            file.write(dword(14 + 40))
+        # Dibujar el triángulo
+        glBindVertexArray(self.VAO)
+        glDrawArrays(GL_TRIANGLES, 0, 3)
 
-            file.write(dword(40))
-            file.write(dword(self.width))
-            file.write(dword(self.height))
-            file.write(word(1))
-            file.write(word(24))
-            file.write(dword(0))
-            file.write(dword(self.width * self.height * 3))
-            file.write(dword(0))
-            file.write(dword(0))
-            file.write(dword(0))
-            file.write(dword(0))
+        glutSwapBuffers()
 
-            for y in range(self.height):
-                for x in range(self.width):
-                    color = self.frameBuffer[x][y]
-                    color = bytes([color[2], color[1], color[0]])
-                    file.write(color)
+    def setup(self):
+        self.shaderProgram = self.create_shader_program(vertex_shader_code, fragment_shader_code)
+        self.createBuffer()
 
-    def glRender(self):
-        for model in self.models:
-            mMat = model.GetModelMatrix()
-            self.activeTexture = model.texture
-            vertexBuffer = []
+def display():
+    renderer.render()
 
-            for face in model.faces:
-                faceVerts = []
-                for i in range(len(face)):
-                    vert = list(model.vertices[face[i][0] - 1])
-                    if self.vertexShader:
-                        vert = self.vertexShader(
-                            vert,
-                            modelMatrix=mMat,
-                            viewMatrix=self.camera.GetViewMatrix(),
-                            projectionMatrix=self.projectionMatrix,
-                            viewportMatrix=self.viewportMatrix
-                        )
-                    vert.extend(model.texCoords[face[i][1] - 1])
-                    if len(vert) < 5:
-                        raise ValueError("Cada vértice debe tener al menos 5 componentes")
-                    faceVerts.append(vert)
+def initGL():
+    glClearColor(0.0, 0.0, 0.0, 1.0)  # Establecer color de fondo
+    glEnable(GL_DEPTH_TEST)  # Habilitar el test de profundidad
 
-                if len(faceVerts) == 3:
-                    vertexBuffer.extend(faceVerts[0])
-                    vertexBuffer.extend(faceVerts[1])
-                    vertexBuffer.extend(faceVerts[2])
-                elif len(faceVerts) == 4:
-                    vertexBuffer.extend(faceVerts[0])
-                    vertexBuffer.extend(faceVerts[2])
-                    vertexBuffer.extend(faceVerts[3])
+def reshape(w, h):
+    glViewport(0, 0, w, h)
 
-            self.glDrawPrimitives(vertexBuffer, 5)
+    # Actualizar la matriz de proyección
+    fov = 45.0
+    near, far = 0.1, 100.0
+    aspect = w / h
 
-    def glTriangle(self, A, B, C):
-        if A[1] < B[1]: A, B = B, A
-        if A[1] < C[1]: A, C = C, A
-        if B[1] < C[1]: B, C = C, B
+    renderer.projectionMatrix = np.array(gluPerspective(fov, aspect, near, far), dtype=np.float32)
+    renderer.viewMatrix = np.array(gluLookAt(0, 0, 3, 0, 0, 0, 0, 1, 0), dtype=np.float32)
 
-        def flatBottom(vA, vB, vC):
-            try:
-                mBA, mCA = (vB[0] - vA[0]) / (vB[1] - vA[1]), (vC[0] - vA[0]) / (vC[1] - vA[1])
-            except ZeroDivisionError:
-                return
-            if vB[0] > vC[0]: vB, vC = vC, vB
-            x0, x1 = vB[0], vC[0]
-            for y in range(round(vB[1]), round(vA[1] + 1)):
-                for x in range(round(x0 - 1), round(x1 + 1)):
-                    self.glDrawTrianglePoint(vA, vB, vC, [x, y])
-                x0 += mBA
-                x1 += mCA
+if __name__ == "__main__":
+    # Inicialización de GLUT y creación de ventana
+    glutInit()
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH)
+    glutInitWindowSize(800, 600)
+    glutCreateWindow("OpenGL Renderer")
 
-        def flatTop(vA, vB, vC):
-            try:
-                mCA, mCB = (vC[0] - vA[0]) / (vC[1] - vA[1]), (vC[0] - vB[0]) / (vC[1] - vB[1])
-            except ZeroDivisionError:
-                return
-            if vA[0] > vB[0]: vA, vB = vB, vA
-            x0, x1 = vA[0], vB[0]
-            for y in range(round(vC[1]), round(vA[1] + 1)):
-                for x in range(round(x0 - 1), round(x1 + 1)):
-                    self.glDrawTrianglePoint(vA, vB, vC, [x, y])
-                x0 += mCA
-                x1 += mCB
+    # Crear instancia del renderer
+    renderer = Renderer()
 
-        if B[1] == C[1]:
-            flatBottom(A, B, C)
-        elif A[1] == B[1]:
-            flatTop(A, B, C)
-        else:
-            D = [A[0] + (B[1] - A[1]) / (C[1] - A[1]) * (C[0] - A[0]), B[1], 0]
-            flatBottom(A, B, D)
-            flatTop(B, D, C)
+    # Inicializar OpenGL
+    initGL()
 
-    def glDrawPrimitives(self, vertices, stride):
-        if self.primitiveType == POINTS:
-            for i in range(0, len(vertices), stride):
-                self.glPoint(*vertices[i:i+2], self.currColor)
-        elif self.primitiveType == LINES:
-            for i in range(0, len(vertices), stride * 2):
-                self.glLine(vertices[i:i+2], vertices[i + stride:i + stride + 2], self.currColor)
-        elif self.primitiveType == TRIANGLES:
-            for i in range(0, len(vertices), stride * 3):
-                A, B, C = vertices[i:i+stride], vertices[i + stride:i + stride + stride], vertices[i + stride * 2:i + stride * 2 + stride]
-                self.glTriangle(A, B, C)
+    # Configurar display y reshape
+    glutDisplayFunc(display)
+    glutReshapeFunc(reshape)
 
-    def glDrawTrianglePoint(self, vA, vB, vC, vP):
-        w, v, u = barycentricCoords([vA[0], vA[1]], [vB[0], vB[1]], [vC[0], vC[1]], [vP[0], vP[1]])
-        if not (0 <= w <= 1 and 0 <= v <= 1 and 0 <= u <= 1):
-            return
-        z = w * vA[2] + v * vB[2] + u * vC[2]
-        if not (self.vpX <= vP[0] < self.vpX + self.vpWidth and self.vpY <= vP[1] < self.vpY + self.vpHeight):
-            return
-        if z < self.zbuffer[vP[0]][vP[1]] and -1 <= z <= 1:
-            self.zbuffer[vP[0]][vP[1]] = z
-            if self.fragmentShader:
-                color = self.fragmentShader(
-                    verts=(vA, vB, vC),
-                    bCoords=(w, v, u),
-                    texture=self.activeTexture
-                )
-                self.glPoint(vP[0], vP[1], color)
-            else:
-                self.glPoint(vP[0], vP[1])
+    # Setup del renderer (cargar shaders y buffer de vértices)
+    renderer.setup()
 
-    def glLoadModel(self, model, texture=None, translate=(0, 0, 0), rotate=(0, 0, 0), scale=(1, 1, 1)):
-        self.models.append(model)
-        model.texture = texture
-        model.Translate(*translate)
-        model.Scale(*scale)
-        model.Rotate(*rotate)
-
-    def glLookAt(self, eye, camPos=(0, 0, 0)):
-        self.camera.position[:3] = eye
-        self.camera.target[:3] = camPos
-
-    def glTransform(self, vertex, matrix):
-        transformedVertex = matrix_mult(matrix, vertex)
-        return [coord / transformedVertex[3] for coord in transformedVertex]
-
-    def glShader(self, vertexShader=None, fragmentShader=None):
-        self.vertexShader = vertexShader
-        self.fragmentShader = fragmentShader
+    # Bucle principal de GLUT
+    glutMainLoop()
