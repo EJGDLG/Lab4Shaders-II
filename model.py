@@ -1,36 +1,58 @@
 from obj import Obj
-from MathLib import *
-from texture import Texture
 
 class Model(object):
     def __init__(self, filename):
         objFile = Obj(filename)
-        
+
         self.vertices = objFile.vertices
         self.texCoords = objFile.texcoords
+        self.normals = objFile.normals
         self.faces = objFile.faces
 
-        self.translate = [0, 0, 0]
-        self.rotate = [0, 0, 0]
-        self.scale = [1, 1, 1]
+        self.buffer = Buffer(self.BuildBuffer())
 
-    def LoadTexture(self, filename):
-        self.texture = Texture(filename)
+    def BuildBuffer(self):
+        data = []
 
-    def GetModelMatrix(self):
-        translateMat = TranslationMatrix(self.translate[0],
-                                         self.translate[1],
-                                         self.translate[2])
-        rotateMat = RotationMatrix(self.rotate[0],
-                                   self.rotate[1],
-                                   self.rotate[2])
-        scaleMat = ScaleMatrix(self.scale[0],
-                               self.scale[1],
-                               self.scale[2])
+        for face in self.faces:
 
-        print("translateMat:", translateMat)
-        print("rotateMat:", rotateMat)
-        print("scaleMat:", scaleMat)
+            faceVerts = []
 
-        modelMatrix = matrix_mult(matrix_mult(translateMat, rotateMat), scaleMat)
-        return modelMatrix
+            for i in range(len(face)):
+                vert = []
+
+                position = self.vertices[face[i][0] - 1]
+
+                for value in position:
+                    vert.append(value)
+
+                vts = self.texCoords[face[i][1] - 1]
+
+                for value in vts:
+                    vert.append(value)
+
+                normals = self.texCoords[face[i][1] - 1]
+
+                for value in normals:
+                    vert.append(value)
+
+                faceVerts.append(vert)
+
+                for value in faceVerts[0]: 
+                    data.append(value)
+                for value in faceVerts[1]:
+                    data.append(value)
+                for value in faceVerts[2]:
+                    data.append(value)
+                if len(faceVerts) == 4:
+                    for value in faceVerts[0]:
+                        data.append(value)
+                    for value in faceVerts[2]:
+                        data.append(value)
+                    for value in faceVerts[3]:
+                        data.append(value)
+
+                return data
+    def Render(self):
+        self.buffer.Render()
+                    
