@@ -11,18 +11,20 @@ out vec3 outNormals;
 void main()
 {
     gl_Position = vec4(position, 1.0);
-    outColor = texCoords;
+    outTexCoords = texCoords;
     outNormals = normals;
 }
 '''
 fragment_shader ='''
 
 #version 450 core
-in vec3 outColor;
+in vec2 outTexCoords;
+in vec3 outNormals;
+
 out vec4 fragColor;
 
 void main()
 {
-    fragColor = vec4(outColor, 1.0);
+    fragColor = vec4(outNormals, 1.0);
 }
 '''
