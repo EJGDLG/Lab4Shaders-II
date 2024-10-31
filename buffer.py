@@ -4,53 +4,64 @@ from OpenGL.GL import *
 from OpenGL.GL.shaders import compileProgram, compileShader
 
 class Buffer(object):
-    def __init__(self, data):
-        self.vertBuffer = array(data, float32)
+  def __init__(self, data):
 
-        # Vertex Buffer Object
-        self.VBO = glGenBuffers(1)
+    self.vertBuffer = array(data, float32)
 
-        # Vertex Array Object
-        self.VAO = glGenVertexArrays(1)
+    # Vertex Buffer Object
+    #aqui es donde mando la informacion a la tarjeta de video
+    self.VBO = glGenBuffers(1)
 
-    def Render(self):
-        # Atar los buffer objects a la tarjeta de video
-        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
-        glBindVertexArray(self.VAO)
+    #tenemos que mandarle la informacion de atributos como color normales, texcords
+    self.VAO = glGenVertexArrays(1)
+  
+  def Render(self):
+    # cada vez que llame render
+    # voy a atar un bufffer a la tarjeta de video
+    glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
+    glBindVertexArray(self.VAO)
 
-        # Mandar la información de vértices
-        glBufferData(GL_ARRAY_BUFFER,
-                     self.vertBuffer.nbytes,  # Buffer size in bytes
-                     self.vertBuffer,         # Buffer data
-                     GL_STATIC_DRAW)          # Usage
+    # uso static draw es para dibujar de manera estatica
+    glBufferData(GL_ARRAY_BUFFER,
+                 self.vertBuffer.nbytes,
+                 self.vertBuffer,
+                 GL_STATIC_DRAW)
+    # atributos especificar que representa y como usarla
 
-        # Atributos
+    #atributo de posiciones
+    glVertexAttribPointer(0,
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * 8,
+                          ctypes.c_void_p(0))
 
-        # Atributo de posiciones
-        glVertexAttribPointer(0,                  # Attribute number
-                              3,                  # Number of components per vertex
-                              GL_FLOAT,           # Data type
-                              GL_FALSE,           # Normalized or not
-                              4*8,                # Stride
-                              ctypes.c_void_p(0)) # Offset
-        glEnableVertexAttribArray(0)
+    #este paso es que atributo quiero activar
+    glEnableVertexAttribArray(0)
 
-        # Atributo de textura
-        glVertexAttribPointer(1,                  # Attribute number
-                              2,                  # Number of components per vertex
-                              GL_FLOAT,           # Data type
-                              GL_FALSE,           # Normalized or not
-                              4*8,                # Stride
-                              ctypes.c_void_p(4*3))  # Offset
-        glEnableVertexAttribArray(1)             # Enable attribute array
+    # Atributo de textCoords
+    # el offset va a ser diferente
+    glVertexAttribPointer(1,
+                          2,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * 8,
+                          ctypes.c_void_p(4*3))
 
-        # Otro atributo  nomales(ajustar según corresponda)
-        glVertexAttribPointer(2,                  # Attribute number
-                              3,                  # Number of components per vertex
-                              GL_FLOAT,           # Data type
-                              GL_FALSE,           # Normalized or not
-                              4*8,                # Stride
-                              ctypes.c_void_p(4*5)) # Offset
-        glEnableVertexAttribArray(2)
+    #este paso es que atributo quiero activar
+    glEnableVertexAttribArray(1)
 
-        glDrawArrays(GL_TRIANGLES, 0, int(len(self.vertBuffer) / 8))
+    # Atributo de Noormales
+    # el offset va a ser diferente
+    glVertexAttribPointer(2,
+                          3,
+                          GL_FLOAT,
+                          GL_FALSE,
+                          4 * 8,
+                          ctypes.c_void_p(4*5))
+
+    #este paso es que atributo quiero activar
+    glEnableVertexAttribArray(2)
+
+
+    glDrawArrays(GL_TRIANGLES, 0,int(len(self.vertBuffer)/8))
