@@ -40,28 +40,28 @@ while isRunning:
             if event.key == pygame.K_ESCAPE:
                 isRunning = False
             elif event.key == pygame.K_F1:
-                Renderer.FillMode()
+                rend.FillMode()
             elif event.key == pygame.K_F2:
-                Renderer.WireFrameMode()
+                rend.WireFrameMode()
             elif event.key == pygame.K_1:  # Vertex Shader Básico
                 vShader = vertex_shader
                 fShader = fragmet_shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
             elif event.key == pygame.K_2:  # Wobble Shader
                 vShader = Wobble_Shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
             elif event.key == pygame.K_3:  # Twist Shader
                 vShader = Twist_Shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
             elif event.key == pygame.K_4:  # Ripple Shader
                 vShader = Ripple_Shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
             elif event.key == pygame.K_5:  # Glow Shader
                 fShader = Glow_Shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
             elif event.key == pygame.K_6:  # Sepia Shader (si lo tienes disponible)
                 fShader = Sepia_Shader
-                Renderer.SetShaders(vShader, fShader)
+                rend.SetShaders(vShader, fShader)
 
     # Movimiento del modelo
     if keys[K_LEFT]:
@@ -70,29 +70,29 @@ while isRunning:
         faceModel.rotation.y += 10 * deltaTime
 
     if keys[K_a]:
-        Renderer.camera.position.x -= 1 * deltaTime
+        rend.camera.position.x -= 1 * deltaTime
 
     if keys[K_d]:
-        Renderer.camera.position.x += 1 * deltaTime
+        rend.camera.position.x += 1 * deltaTime
 
     if keys[K_w]:
-        Renderer.camera.position.y += 1 * deltaTime
+        rend.camera.position.y += 1 * deltaTime
 
     if keys[K_s]:
-        Renderer.camera.position.y -= 1 * deltaTime
+        rend.camera.position.y -= 1 * deltaTime
 
     # Movimiento de la luz
     if keys[K_j]:
-        Renderer.pointLight.x -= 1 * deltaTime
+        rend.pointLight.x -= 1 * deltaTime
 
     if keys[K_l]:
-        Renderer.pointLight.x += 1 * deltaTime
+        rend.pointLight.x += 1 * deltaTime
 
     if keys[K_i]:
-        Renderer.pointLight.z -= 1 * deltaTime
+        rend.pointLight.z -= 1 * deltaTime
 
     if keys[K_k]:
-        Renderer.pointLight.z += 1 * deltaTime
+        rend.pointLight.z += 1 * deltaTime
 
     rend.Render()
     pygame.display.flip()
