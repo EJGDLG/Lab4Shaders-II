@@ -1,23 +1,15 @@
 vertex_shader = """
 #version 450 core
-layout(location=0) in vec3 position;
-layout(location=1) in vec2 textCoords;
-layout(location=2) in vec3 normals;
-out vec2 outTextCoords;
-out vec3 outNormals;
-out vec4 outPosition;
 
-uniform mat4 modelMatrix;
-uniform float time;
-uniform mat4 viewMatrix;
-uniform mat4 proyectionMatrix;
-void main()
-{ 
-  outPosition = modelMatrix * vec4(position, 1.0);
-  gl_Position = proyectionMatrix * viewMatrix * outPosition;
-  outTextCoords =  textCoords;
-  outNormals = normals;
+in vec2 outTexCoords;
+uniform sampler2D tex;
+out vec4 fragColor;
+
+void main() {
+    vec2 correctedTexCoords = vec2(outTexCoords.x, 1.0 - outTexCoords.y);
+    fragColor = texture(tex, correctedTexCoords);
 }
+
 """
 
 Wobble_Shader = """
