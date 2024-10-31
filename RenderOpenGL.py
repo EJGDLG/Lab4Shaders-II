@@ -5,8 +5,8 @@ from buffer import Buffer
 from model import Model
 from shaders import *
 
-width = 1060
-height = 1040
+width = 960
+height = 900
 
 pygame.init()
 
@@ -15,7 +15,8 @@ clock = pygame.time.Clock()
 
 rend = Renderer(screen=screen)
 
-#rend.SetShaders(vShader=vertex_shader, fShader=fragmet_shader)
+
+rend.SetShaders(vShader=vertex_shader, fShader=fragmet_shader)
 
 faceModel = Model("Gun.obj")
 faceModel.AddTexture("Gun.bmp")
@@ -28,7 +29,7 @@ isRunning = True
 # Set default shaders
 vShader = vertex_shader  # Default vertex shader
 fShader = fragmet_shader  # Default fragment shader
-#rend.SetShaders(vShader, fShader)
+rend.SetShaders(vShader, fShader)
 while isRunning:
     deltaTime = clock.tick(60) / 1000
     keys = pygame.key.get_pressed()
