@@ -24,8 +24,8 @@ rend = Renderer(screen)
 
 #rend.scene.append(Buffer(triangle))
 
-faceModel  = Model("Gun.obj")
-faceModel.AddTexture("Gun.bmp")
+faceModel  = Model("C:/Users/DeLeon/Documents/GitHub/Lab4Shaders-II/model.obj")
+faceModel.AddTexture("C:/Users/DeLeon/Documents/GitHub/Lab4Shaders-II/model.bmp")
 rend.scene.append(faceModel)
 
 isRunning = True
